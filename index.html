@@ -1,0 +1,859 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Talking Simulator</title>
+<style>
+:root{--bg:#1b1420;--card:#2a1f30;--txt:#f6eef8;--mute:#b8a7c0;--ok:#7ed39a;--acc:#ffb347}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,sans-serif;min-height:100vh;display:flex;justify-content:center}
+main{width:100%;max-width:560px;padding:16px;display:flex;flex-direction:column;gap:14px}
+h1{font-size:1.4rem;margin:8px 0 0}
+.bars{display:grid;gap:8px}
+.bar label{display:flex;justify-content:space-between;font-size:.85rem;color:var(--mute)}
+.track{height:12px;background:#3b2d44;border-radius:8px;overflow:hidden}
+.fill{height:100%;transition:width .4s}
+#pat .fill{background:var(--ok)}
+#int .fill{background:var(--acc)}
+.card{background:rgba(42,31,48,.84);border-radius:14px;padding:16px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+/* Fondo de coctelería: fijo, con velo oscuro arriba para que se lean los formularios */
+body::before{content:'';position:fixed;inset:0;z-index:-1;background:linear-gradient(rgba(12,6,16,.35),rgba(12,6,16,.85)),url('assets/bar_jazz.webp') center/cover no-repeat}
+.music{position:fixed;top:10px;right:10px;z-index:5;width:44px;height:44px;border-radius:50%;padding:0;text-align:center;font-size:1.2rem;background:rgba(42,31,48,.9)}
+.scene{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:start}
+.portrait svg{width:100%;height:auto;border-radius:10px;display:block}
+.pimg{width:100%;height:auto;border-radius:10px;display:block}
+.portraitWrap{position:relative;max-width:180px}
+/* Medallón con la expresión de ella, sobre la esquina de la foto */
+.mood{position:absolute;right:-8px;bottom:-8px;width:34%;aspect-ratio:1/1;object-fit:cover;border-radius:50%;border:3px solid var(--acc);box-shadow:0 2px 8px rgba(0,0,0,.5)}
+#her{font-size:1.05rem;line-height:1.45;min-height:5em}
+.who{font-size:.8rem;color:var(--mute);margin-bottom:6px}
+@media (max-width:420px){.scene{grid-template-columns:1fr}.portrait{max-width:180px}}
+.opts,.bonus{display:grid;gap:10px}
+.bonus{grid-template-columns:1fr 1fr}
+button{font:inherit;color:var(--txt);background:#3d2d4a;border:0;border-radius:12px;padding:12px;text-align:left;cursor:pointer;font-size:.98rem}
+button:hover,button:focus-visible{background:#4d3a5c}
+button:disabled{opacity:.45;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row button{text-align:center;flex:1 1 150px}
+.danger{background:#6b2c44}
+.gift{background:#4a3558;text-align:center}
+.log{font-size:.85rem;color:var(--mute);max-height:160px;overflow:auto;display:flex;flex-direction:column;gap:4px}
+.hidden{display:none}
+.end{font-size:1.15rem;text-align:center;padding:12px 8px;line-height:1.5}
+.hint{font-size:.8rem;color:var(--mute)}
+.money{font-size:.95rem;color:var(--acc)}
+.girls{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.girls .portrait{cursor:pointer;border-radius:12px;outline:2px solid transparent}
+.girls .portrait.sel{outline-color:var(--acc)}
+.girls small{display:block;color:var(--mute);font-size:.8rem}
+label.chk{font-size:.9rem;color:var(--mute);display:flex;gap:6px;align-items:center}
+.form{display:grid;gap:10px}
+.form input{font:inherit;color:var(--txt);background:var(--card);border:2px solid #3d2d4a;border-radius:12px;padding:12px}
+.form input:focus{outline:none;border-color:var(--acc)}
+.err{color:#ff8fa8;font-size:.9rem;min-height:1.2em;margin:4px 0}
+table.rank{width:100%;border-collapse:collapse;font-size:.95rem}
+table.rank th,table.rank td{padding:8px 6px;text-align:left;border-bottom:1px solid #3b2d44}
+table.rank th{color:var(--mute);font-weight:normal;font-size:.85rem}
+</style>
+</head>
+<body>
+<button id="music" class="music" aria-label="Música">🎵</button>
+<main>
+  <h1>Talking Simulator</h1>
+
+  <section id="auth" class="card hidden">
+    <h2 id="authTitle">Entrar</h2>
+    <form id="authForm" class="form">
+      <input id="authUser" placeholder="Usuario (3 a 16 caracteres)" autocomplete="username" maxlength="16" required>
+      <input id="authPass" type="password" placeholder="Contraseña (mínimo 4)" autocomplete="current-password" required>
+      <button type="submit" id="authBtn">Entrar</button>
+    </form>
+    <p class="err" id="authErr"></p>
+    <button id="authSwitch" class="gift">¿No tienes cuenta? Crear una</button>
+    <p class="hint">Las cuentas y el ranking se guardan en este navegador.</p>
+  </section>
+
+  <section id="menu" class="card hidden">
+    <h2>Menú</h2>
+    <p id="welcome"></p>
+    <div class="opts">
+      <button id="mPlay">▶ Jugar</button>
+      <button id="mRank">🏆 Ranking</button>
+      <button id="mLogout" class="danger">Cerrar sesión</button>
+    </div>
+    <label class="chk" style="margin-top:12px">Volumen de la música <input type="range" id="vol" min="0" max="1" step="0.05"></label>
+  </section>
+
+  <section id="rank" class="card hidden">
+    <h2>Ranking</h2>
+    <p class="hint">Puntos = nivel × 100 + paciencia que te queda al ganar.</p>
+    <div id="rankList"></div>
+    <div class="row"><button id="rankBack">Volver al menú</button></div>
+  </section>
+
+  <section id="start" class="card">
+    <p>Estás en una cita. Ella habla y habla. Tú aguantas. Cuando haya química, propón irte a casa, pero no te quedes sin paciencia antes.</p>
+    <p class="hint">Elige con quién. Todas son adultas.</p>
+    <div class="girls" id="girls"></div>
+    <p class="hint" style="margin-top:14px">Empiezas en el nivel 1. Gana una partida para desbloquear el siguiente. Cuanto más alto, más pesada, más aguda y más sexy va vestida ella.</p>
+    <div class="row">
+      <button data-lvl="1">Nivel 1 · Charla tranquila</button>
+      <button data-lvl="2">Nivel 2 · Charla pesada</button>
+      <button data-lvl="3">Nivel 3 · Charla infernal</button>
+    </div>
+    <label class="chk"><input type="checkbox" id="voice" checked> Que hable en voz alta (si tu navegador lo permite)</label>
+    <div class="row"><button id="startBack" class="gift">Volver al menú</button></div>
+  </section>
+
+  <section id="game" class="hidden">
+    <div class="bars">
+      <div class="bar" id="pat"><label><span>Tu paciencia</span><span id="patN"></span></label><div class="track"><div class="fill"></div></div></div>
+      <div class="bar" id="int"><label><span>Interés de ella</span><span id="intN"></span></label><div class="track"><div class="fill"></div></div></div>
+    </div>
+    <div class="row" style="justify-content:space-between">
+      <span class="money" id="money"></span>
+      <span class="hint" id="need"></span>
+    </div>
+    <div class="card scene">
+      <div class="portraitWrap">
+        <div class="portrait" id="portrait"></div>
+        <img id="mood" class="mood" alt="">
+      </div>
+      <div>
+        <div class="who" id="who"></div>
+        <div id="her"></div>
+      </div>
+    </div>
+    <div class="opts" id="opts"></div>
+    <div class="bonus" id="bonus"></div>
+    <div class="row"><button id="home" class="danger">Proponer irnos a casa</button></div>
+    <div class="log" id="log"></div>
+  </section>
+
+  <section id="end" class="card hidden">
+    <div class="end" id="endTxt"></div>
+    <div class="row"><button id="again">Otra vez</button><button id="endMenu" class="gift">Menú</button></div>
+  </section>
+</main>
+
+<script>
+// Niveles: cuánto cuesta cada frase de ella, cuánto interés se pierde por turno,
+// el interés mínimo para poder proponer irse, cuánto dinero tienes, y cómo suena.
+const L = {
+  1: {drain: 4, decay: 0, need: 45, money: 35, pitch: 1.0, rate: 1.0, sexy: 1,
+      suffix: ['']},
+  2: {drain: 6, decay: 1, need: 55, money: 25, pitch: 1.35, rate: 1.1, sexy: 2,
+      suffix: [' Y luego te cuento lo de mi tía, que es muy larga.', ' ...y ya sabes, que nunca se sabe.', ' Bueno, a lo que iba.']},
+  3: {drain: 8, decay: 2, need: 65, money: 20, pitch: 1.8, rate: 1.25, sexy: 3,
+      suffix: [' ¡¡¿¿Me estás escuchando??!!', ' ¡¡Y LUEGO!!', ' ¡¡NO ME CORTES!!']}
+};
+
+// Chicas adultas: aspecto y voz. El vestido cambia según el nivel (sexy 1-3).
+const GIRLS = [
+  {name: 'Lucía', eye: '#4f8a3c', style: 'long', cut: 'aline', age: 24, hair: '#5a2e1a', skin: '#fde3d3', dress: '#e0245e', pitch: 0,
+   intro: 'Hola, perdona, ¿llevas mucho esperando? Yo siempre llego tarde, pero hablo por las dos.'},
+  {name: 'Marta', eye: '#6b4226', style: 'bob', cut: 'bodycon', age: 28, hair: '#1e1e28', skin: '#f9dccb', dress: '#2e6fd8', pitch: -0.1,
+   intro: 'Vaya, por fin alguien puntual. Ya me empezaba a preocupar.'},
+  {name: 'Nerea', eye: '#3a78c9', style: 'ponytail', cut: 'flare', age: 26, hair: '#d9a441', skin: '#fee8da', dress: '#2fa37a', pitch: 0.1,
+   intro: 'Ya estaba pensando en irme. Pero bueno, ahora que estás aquí, cuéntame algo.'},
+  {name: 'Sofía', eye: '#7a5a2e', style: 'bun', cut: 'wrap', age: 31, hair: '#7a2e8e', skin: '#f7d9c6', dress: '#2a2a2a', pitch: -0.05,
+   intro: '¿Eres de los que llegan tarde o de los que nunca llegan? Me da igual, siéntate.'}
+];
+
+// Grupos seleccionables (índices 0 y 1 de GIRLS). Cada nivel es una mujer distinta;
+// la del nivel 3 es la original (Lucía o Marta). Nombres y edades provisionales.
+const PHOTOS = [
+  {img: 'lucia', label: 'Vestido fucsia', women: [{name: 'Carla', age: 25}, {name: 'Irene', age: 27}, {name: 'Lucía', age: 24}]},
+  {img: 'marta', label: 'Vestido azul', women: [{name: 'Elena', age: 27}, {name: 'Nadia', age: 30}, {name: 'Marta', age: 28}]}
+];
+
+// ---------- Conversaciones ----------
+// Cada turno ella habla entre 15 y 25 s (a velocidad normal ~2,6 palabras/s; el nivel la acelera).
+// Cada conversación mezcla un tema con datos al azar. Las frases no se repiten hasta agotarlas.
+const WPS = 2.6;
+const SLOTS = {
+  mascota: ['Canela', 'Nube', 'Toby', 'Lola', 'Bruno', 'Frida', 'Pancho', 'Chispa', 'Mango'],
+  ciudad: ['Lisboa', 'Oporto', 'Valencia', 'Sevilla', 'Bilbao', 'Roma', 'Tokio', 'Marrakech', 'Nueva York'],
+  hobby: ['la cerámica', 'el ukelele', 'el macramé', 'la fotografía analógica', 'el pádel', 'bordar', 'el yoga a las seis de la mañana'],
+  trabajo: ['veterinaria', 'guía de museo', 'contable', 'panadera', 'fisioterapeuta', 'diseñadora de interiores'],
+  tema: ['los pulpos', 'las jirafas', 'las abejas', 'los caracoles', 'las plantas carnívoras', 'los sueños lúcidos', 'los horóscopos'],
+  ex: ['mi ex', 'mi último novio', 'un chico de mi oficina', 'mi exmarido']
+};
+const TOPICS = [
+  {open: ['Perdona, es que {mascota} se ha comido un calcetín y todavía estoy nerviosa.', '¿Sabes que tengo un perro que se llama {mascota}? Es lo más mona del mundo.'],
+   body: ['Lo llevo al veterinario cada dos por tres, que es carísimo, pero no lo cambio por nada.', 'Una vez se escapó y lo encontré en la panadería de la esquina, comiéndose un croissant.', 'Tiene la manía de dormir solo si le pongo la radio de los años ochenta.', 'Dicen que los perros se parecen a sus dueños. No sé si es verdad, pero él seguro que sí.'],
+   asks: [
+     {q: '¿Tú tienes animales o te dan miedo?',
+      good: ['Me encantan los animales. Y uno que se llama {mascota} me gana desde ya.', 'Tengo un gato que me odia. Me gustaría conocer a {mascota} a ver si a él le caigo mejor.'],
+      neutral: ['Pues depende del animal, la verdad.', 'Jaja, ya veo. ¿Y qué pasó al final con el calcetín?'],
+      bad: ['A mí los animales me dan igual, la verdad.', 'Pues a mí me dan un poco de asco.']},
+     {q: '¿Tú prefieres perros o gatos? No me digas gatos, por favor.',
+      good: ['Perros, sin duda. Y si son como {mascota}, mejor todavía.', 'Perros siempre. Me encantaría ver a {mascota} con su radio de los ochenta.'],
+      neutral: ['Pues no tengo preferencia.', 'Mmm, depende del día.'],
+      bad: ['Gatos, y no pienso disculparme.', 'Gatos, claramente. Los perros son muy pesados.']}
+   ]},
+  {open: ['El año pasado estuve en {ciudad} y todavía sueño con sus calles.', 'Estoy pensando en irme a vivir a {ciudad}. ¿Tú qué opinas?'],
+   body: ['Allí las terrazas duran hasta las tres de la mañana, y nadie tiene prisa por nada.', 'Me perdí tres veces el primer día, pero encontré una librería que me cambió la vida.', 'Mi amiga dice que la comida es mejor que en ningún otro sitio. Yo no la contradigo.', 'Lo malo es que nunca aprendí bien el idioma, así que me pasé la semana señalando cosas.'],
+   asks: [
+     {q: '¿Tú has viajado mucho o eres de quedarte en casa?',
+      good: ['Viajo lo justo, pero contigo a {ciudad} iría ya mismo.', 'Me encanta viajar, y tú me has dado ganas de ir a {ciudad}.'],
+      neutral: ['Un poco de cada cosa, la verdad.', 'Depende de la época del año.'],
+      bad: ['Prefiero quedarme en casa, viajar cansa mucho.', 'No viajo nunca, y no entiendo a la gente que lo hace.']},
+     {q: '¿Tienes algún lugar al que volverías siempre?',
+      good: ['Ahora mismo, este bar. Y tú eres buena parte del motivo.', 'Volvería a {ciudad} contigo sin pensarlo.'],
+      neutral: ['Pues no sé, hay muchos.', 'Uno de playa, supongo.'],
+      bad: ['Ninguno. Me gusta cambiar de sitio.', 'Ninguno, la verdad. Me aburren los sitios repetidos.']}
+   ]},
+  {open: ['Trabajo de {trabajo} desde hace años y la gente siempre me pregunta lo mismo.', 'Del trabajo de {trabajo} hay cosas que nadie se imagina.'],
+   body: ['Hay días buenos, días malos y un jefe que cree que sabe más que yo de todo.', 'Mi compañera y yo hacemos apuestas sobre quién llega antes al café de la mañana.', 'Me encanta, aunque a veces me levanto pensando si cerré la puerta del trabajo.', 'Lo mejor es cuando alguien se va contento y te escribe una tarjeta.'],
+   asks: [
+     {q: '¿Y tú a qué te dedicas? Y no me digas que no trabajas.',
+      good: ['Trabajo mucho, pero me encanta. Y seguro que lo mío no es tan interesante como tu trabajo de {trabajo}.', 'Lo mío es algo que me apasiona, aunque hoy prefiero escucharte a ti.'],
+      neutral: ['Algo de oficina, nada especial.', 'Ahora mismo estoy con un proyecto, nada fuera de lo normal.'],
+      bad: ['No trabajo, y tampoco pienso explicarlo.', 'Eso no te importa mucho ahora, ¿no?']},
+     {q: '¿Te gusta lo que haces o estás esperando a otra cosa?',
+      good: ['Me gusta, y esta noche está siendo mejor de lo que esperaba.', 'Estoy esperando a alguien como tú, la verdad.'],
+      neutral: ['Me gusta a ratos, como casi todo.', 'Pues depende del mes.'],
+      bad: ['Estoy esperando el fin de semana, la verdad.', 'Estoy deseando irme de aquí, si te soy sincero.']}
+   ]},
+  {open: ['Desde que empecé con {hobby} no puedo parar. Es mi vicio secreto.', 'Me apunté a un curso y empecé con {hobby}. Lo dejé todo, pero me encanta empezar cosas.'],
+   body: ['Hice una pieza horrible la primera semana, pero ahora la tengo en el salón como un trofeo.', 'Tengo una libreta llena de ideas que todavía no he probado, y eso me tiene contenta.', 'Mi madre dice que me aburro en cuanto le cojo el truco, y en parte tiene razón.', 'Lo que más me gusta es el momento en que sale bien y no sabes ni cómo.'],
+   asks: [
+     {q: '¿Tú tienes algún hobby raro o eres de los que ven series?',
+      good: ['Veo series, pero cambiaría una temporada entera por una tarde contigo.', 'Tengo uno raro, la verdad. Me gustaría enseñártelo esta noche.'],
+      neutral: ['Un poco de todo, nada especial.', 'Veo series de vez en cuando.'],
+      bad: ['Ver series, y me molesta que me pregunten por ellas.', 'Yo no tengo hobbies, la verdad.']},
+     {q: '¿Te has apuntado alguna vez a algo y lo has dejado a medias?',
+      good: ['Muchas veces, pero contigo no me apetece dejarlo.', 'Sí, pero a ti te daría otra oportunidad sin dudarlo.'],
+      neutral: ['Sí, claro, a todos nos pasa.', 'Alguna vez, sí.'],
+      bad: ['No, yo termino todo lo que empiezo.', 'Eso es de gente sin constancia.']}
+   ]},
+  {open: ['¿Sabías que {tema} tienen una vida mucho más interesante de lo que parece?', 'Ayer vi un documental sobre {tema} y ya no puedo pensar en otra cosa.'],
+   body: ['Parece que no hacen nada, pero en realidad están resolviendo problemas todo el día.', 'El narrador hablaba con una voz tan seria que me emocioné con cada detalle.', 'Mi hermano dice que soy demasiado intensa con estos temas. Puede que tenga razón.', 'Después de verlo me pasé una hora leyendo en internet hasta las tantas.'],
+   asks: [
+     {q: '¿Tú sabías algo de eso o es la primera vez que lo oyes?',
+      good: ['Sabía algo, pero tú lo cuentas mucho mejor.', 'No, y ahora quiero saberlo todo contigo.'],
+      neutral: ['Algo había oído, sí.', 'Pues no sé, la verdad.'],
+      bad: ['Es la primera vez, y tampoco me interesa mucho.', 'Ya lo sabía, y me parece bastante aburrido.']},
+     {q: '¿Hay algo que te entusiasme tanto que se te olvide la hora?',
+      good: ['Sí, y ahora mismo es esta conversación.', 'Sí. Y contigo se me olvida la hora por completo.'],
+      neutral: ['A veces, sí.', 'Pues puede ser, no sé.'],
+      bad: ['No, la verdad es que miro el reloj mucho.', 'Nada en especial. Y ya es tardísimo.']}
+   ]},
+  {open: ['{ex} decía que yo hablo demasiado. Dime la verdad, ¿hablo demasiado?', 'Antes pensaba que el amor era cuestión de química. Ahora ya no sé nada.'],
+   body: ['Desde entonces intento escuchar más, pero me sale una idea cada tres segundos.', 'Mi madre dice que los hombres que no hablan esconden algo. Yo creo que es exagerado.', 'La última vez que salí con alguien acabé contándole mi vida entera antes del segundo plato.', 'Quizá me gusta llenar los silencios, y los silencios me dan vértigo.'],
+   asks: [
+     {q: '¿Tú eres de los que llenan silencios o de los que se quedan callados?',
+      good: ['Yo escucho muy bien, así que llena todos los silencios que quieras.', 'Me quedo callado escuchándote, que es lo que me gusta.'],
+      neutral: ['Depende de la compañía.', 'Un poco de cada.'],
+      bad: ['Me quedo callado, prefiero el silencio a esto.', 'Yo no hablo mucho, y me cansa que me hablen tanto.']},
+     {q: '¿Qué es lo que más te cuesta de una primera cita?',
+      good: ['La verdad es que tú lo llevas muy bien.', 'Nada, esto va muy bien.'],
+      neutral: ['Pues no sé, los nervios.', 'Empezar, supongo.'],
+      bad: ['Aguantar a gente que habla sin parar.', 'Que la otra persona no tenga nada que decir.']}
+   ]}
+];
+// Relleno si se agotan las frases del tema
+const FILLER = ['Perdona, decía que...', 'Y lo mejor es que nadie me creyó cuando lo conté.', 'Bueno, a lo que iba.', 'Me he liado, pero lo importante es que tú me escuchas.', '¿Te he contado lo de mi tía? Es muy larga, pero merece la pena.'];
+
+
+const LINE_NO = '¿Ya? Pero si acabamos de empezar...';
+const $ = id => document.getElementById(id);
+const rnd = a => a[Math.floor(Math.random() * a.length)];
+let S = null;
+let girlIdx = 0;
+
+// ---------- Dibujo sencillo de la chica (SVG) ----------
+function portrait(g, t) {
+  // Estilo dibujo animado para adultos: contorno grueso, colores planos y sombras suaves.
+  const shade = (hex, f) => {
+    const n = parseInt(hex.slice(1), 16);
+    const m = v => Math.max(0, Math.min(255, Math.round(v * f))).toString(16).padStart(2, '0');
+    return '#' + m(n >> 16) + m((n >> 8) & 255) + m(n & 255);
+  };
+  const D = '#1d1418';
+  const O = `stroke="${D}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"`;
+  const skin = g.skin, dress = g.dress, hair = g.hair;
+  const skinS = shade(skin, 0.82), dressS = shade(dress, 0.7), hairS = shade(hair, 0.7);
+  const shoe = shade(dress, 0.55), gold = '#f2c14e';
+  const lips = ['#d8798a', '#d63a5e', '#e8001c'][t - 1];
+  const neckY = [236, 262, 292][t - 1];
+  const hem = [560, 448, 408][t - 1];
+  const hemX = [74, 62, 54][t - 1];
+  // Curvas: pecho (bw), caderas (hx), cintura (wn) y labios (lw, lh) crecen con el nivel.
+  const bw = [0, 12, 22][t - 1], hx = [0, 12, 20][t - 1], hipY = [362, 352, 344][t - 1], wn = [0, 4, 10][t - 1];
+  const lw = [15, 17, 21][t - 1], lh = [11, 13, 17][t - 1];
+  const X = hemX + [0, 6, 16][t - 1] + ({aline: 0, bodycon: -16, flare: 14, wrap: 4}[g.cut] || 0);
+  let bottom = `${150 + X} ${hem} Q150 ${hem + 10} ${150 - X} ${hem}`;
+  if (g.cut === 'flare') {
+    const n = 5, w = 2 * X / n;
+    bottom = `${150 + X} ${hem}`;
+    for (let i = 0; i < n; i++) { const x0 = 150 + X - i * w; bottom += ` Q${x0 - w / 2} ${hem + 12} ${x0 - w} ${hem}`; }
+  }
+  if (g.cut === 'wrap') bottom = `${150 + X} ${hem - 16} L${150 - X} ${hem + 6}`;
+  const wrapLine = g.cut === 'wrap' ? `<path d="M122 232 Q160 292 182 330" stroke="${dressS}" stroke-width="3" fill="none"/>` : '';
+  const limb = d => `<path d="${d}" stroke="${D}" stroke-width="22" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" stroke="${skin}" stroke-width="16" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const k = g.name.normalize('NFD').replace(/[^a-z]/gi, '') + t;
+
+  const back = {
+    long: `M92 120 Q76 26 150 20 Q224 26 208 120 Q212 220 226 300 Q196 320 178 298 Q172 250 170 210 L130 210 Q128 250 122 298 Q104 320 74 300 Q88 220 92 120 Z`,
+    bob: `M86 112 Q78 24 150 20 Q222 24 214 112 Q220 170 206 186 Q188 192 178 176 L122 176 Q112 192 94 186 Q80 170 86 112 Z`,
+    ponytail: `M98 104 Q96 26 150 24 Q204 26 202 104 Z`,
+    bun: `M98 104 Q96 30 150 28 Q204 30 202 104 Z`
+  }[g.style];
+  const front = {
+    long: `M96 112 Q92 34 150 28 Q210 34 204 112 Q200 84 182 62 Q150 82 104 82 Q98 92 96 112 Z`,
+    bob: `M94 112 Q90 30 150 26 Q210 30 206 112 L200 112 Q198 84 190 72 L110 72 Q102 84 100 112 Z`,
+    ponytail: `M96 108 Q96 30 150 28 Q204 30 204 108 Q196 60 150 56 Q110 58 96 108 Z`,
+    bun: `M96 108 Q96 34 150 34 Q204 34 204 108 Q194 64 152 52 Q150 50 148 52 Q106 64 96 108 Z`
+  }[g.style];
+  const extraBack = {
+    ponytail: `<path d="M190 56 Q252 64 248 190 Q246 250 222 272 Q216 230 224 190 Q228 110 186 76 Z" fill="${hair}" ${O}/>`,
+    bun: `<circle cx="150" cy="30" r="26" fill="${hair}" ${O}/><path d="M134 30 Q150 12 166 30 Q150 44 140 32" stroke="${hairS}" stroke-width="3" fill="none"/>`
+  }[g.style] || '';
+  const extraFront = {
+    ponytail: `<ellipse cx="192" cy="62" rx="8" ry="10" fill="${dress}" ${O}/>`,
+    bun: `<path d="M104 100 Q98 140 108 168" stroke="${hair}" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M196 100 Q202 140 192 168" stroke="${hair}" stroke-width="5" fill="none" stroke-linecap="round"/>`
+  }[g.style] || '';
+
+  const neckline = t === 1 ? `Q150 ${neckY + 14} 172 214` : `L150 ${neckY} L172 214`;
+  const legs = hem < 540
+    ? `<path d="M122 ${hem - 8} Q116 470 126 520 Q128 545 132 562 L146 562 Q148 540 148 520 Q152 470 148 ${hem - 8} Z" fill="${skin}" ${O}/>` +
+      `<path d="M178 ${hem - 8} Q184 470 174 520 Q172 545 168 562 L154 562 Q152 540 152 520 Q148 470 152 ${hem - 8} Z" fill="${skin}" ${O}/>` +
+      `<path d="M126 560 L150 560 Q154 574 146 582 L122 582 Q118 570 126 560 Z" fill="${shoe}" ${O}/><path d="M128 582 L131 596 L135 582 Z" fill="${shoe}" ${O}/>` +
+      `<path d="M174 560 L150 560 Q146 574 154 582 L178 582 Q182 570 174 560 Z" fill="${shoe}" ${O}/><path d="M172 582 L169 596 L165 582 Z" fill="${shoe}" ${O}/>`
+    : `<ellipse cx="132" cy="574" rx="16" ry="7" fill="${shoe}" ${O}/><ellipse cx="168" cy="574" rx="16" ry="7" fill="${shoe}" ${O}/>`;
+  const jewels = (t >= 2
+    ? `<circle cx="100" cy="142" r="7" fill="none" stroke="${gold}" stroke-width="3"/><circle cx="200" cy="142" r="7" fill="none" stroke="${gold}" stroke-width="3"/>` : '') +
+    (t === 3 ? `<path d="M134 196 Q150 220 166 196" stroke="${gold}" stroke-width="2.5" fill="none"/><circle cx="150" cy="220" r="4.5" fill="${gold}"/>` : '');
+  const cleavage = t >= 2 ? `<path d="M143 ${neckY - 22} Q150 ${neckY - 10} 157 ${neckY - 22}" stroke="${skinS}" stroke-width="2.5" fill="none" stroke-linecap="round"/>` : '';
+  const slit = t === 3 ? `<path d="M172 ${hem - 2} L167 ${hem - 34}" stroke="${D}" stroke-width="2.5"/>` : '';
+  const belt = t <= 2 ? `<path d="M${119 + wn} 330 Q150 338 ${181 - wn} 330" stroke="${dressS}" stroke-width="5" fill="none" stroke-linecap="round"/>` : '';
+  const bR = [[0, 0], [22, 20], [30, 28]][t - 1], bY = [0, 268, 274][t - 1];
+  // Pecho: volumen con luz y sombra, sin contorno de círculo, para que parezca natural.
+  const busts = t >= 2
+    ? [-1, 1].map(s => {
+        const cx = 150 + s * (bR[0] - 2);
+        return `<ellipse cx="${cx}" cy="${bY}" rx="${bR[0]}" ry="${bR[1]}" fill="url(#bv${k})"/>` +
+          `<path d="M${150 + s * (2 * bR[0] - 4)} ${bY + 2} Q${150 + s * bR[0]} ${bY + bR[1] + 6} ${150 + s * 3} ${bY + bR[1] * 0.5}" stroke="${dressS}" stroke-width="3" fill="none" stroke-linecap="round"/>` +
+          `<path d="M${150 + s * bR[0] * 1.5} ${bY - bR[1] * 0.55} Q${150 + s * bR[0] * 1.75} ${bY - bR[1] * 0.2} ${150 + s * bR[0] * 1.7} ${bY + bR[1] * 0.2}" stroke="#fff" stroke-width="3" opacity=".28" fill="none" stroke-linecap="round"/>`;
+      }).join('') +
+      `<path d="M130 212 L150 ${neckY} L170 212 Z" fill="${skin}"/>` +
+      `<path d="M137 ${neckY - bR[1] * 1.4} Q143 ${neckY - bR[1] * 0.6} 148 ${neckY - 5} M163 ${neckY - bR[1] * 1.4} Q157 ${neckY - bR[1] * 0.6} 152 ${neckY - 5}" stroke="${skinS}" stroke-width="2" fill="none" stroke-linecap="round"/>` +
+      `<path d="M130 212 L150 ${neckY} L170 212" stroke="${D}" stroke-width="2.5" fill="none" stroke-linejoin="round"/>`
+    : '';
+  // Ojo almendrado con iris de color; en el nivel 3, párpado caído.
+  const eye = (cx, dir) => {
+    const o = cx - 14 * dir, i = cx + 14 * dir, x1 = Math.min(o, i) - 3, x2 = Math.max(o, i) + 3;
+    const id = 'e' + (dir > 0 ? 'L' : 'R') + k;
+    const al = `M${o} 106 Q${cx} 92 ${i} 105 Q${cx} 117 ${o} 106 Z`;
+    const lash = 1 + t * 0.25;
+    const lid = t === 3 ? `<path d="M${x1} 88 L${x2} 88 L${x2} 103 Q${cx} 97 ${x1} 103 Z" fill="${shade(dress, 0.9)}"/>` : '';
+    const lidLine = t === 3 ? `M${o} 104 Q${cx} 97 ${i} 103` : `M${o} 106 Q${cx} 92 ${i} 105`;
+    return `<path d="M${o - 2 * dir} 102 Q${cx} 84 ${i + dir} 100 Q${cx} 93 ${o - 2 * dir} 102 Z" fill="${dress}" opacity="${shadow}"/>
+    <clipPath id="${id}"><path d="${al}"/></clipPath>
+    <path d="${al}" fill="#fff"/>
+    <g clip-path="url(#${id})"><circle cx="${cx}" cy="106" r="7" fill="${g.eye}"/><circle cx="${cx}" cy="106" r="3.2" fill="${D}"/><circle cx="${cx + 2.2}" cy="103.6" r="1.8" fill="#fff"/>${lid}</g>
+    <path d="${lidLine}" stroke="${D}" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <path d="M${o + 3 * dir} 108 Q${cx} 116 ${i} 106" stroke="${D}" stroke-width="1.2" opacity=".6" fill="none"/>
+    <path d="M${o} 105 L${o - 7 * lash * dir} ${105 - 6 * lash} M${o + 4 * dir} 101 L${o - 2 * lash * dir} ${101 - 8 * lash} M${o + 9 * dir} 98 L${o + 6 * dir} ${98 - 7 * lash}" stroke="${D}" stroke-width="2" stroke-linecap="round"/>
+    <path d="M${o - dir} 90 Q${cx - 2 * dir} 79 ${i} 85" stroke="${hairS}" stroke-width="2.8" fill="none" stroke-linecap="round"/>`;
+  };
+  const shadow = 0.25 + 0.15 * t;
+
+  return `<svg viewBox="0 0 300 600" role="img" aria-label="${g.name}">
+  <defs><linearGradient id="bg${k}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#5a3a6b"/><stop offset="1" stop-color="#22172a"/></linearGradient>
+    <radialGradient id="bv${k}" cx=".42" cy=".35" r=".65"><stop offset="0" stop-color="${shade(dress, 1.45)}" stop-opacity=".6"/><stop offset="1" stop-color="${dress}" stop-opacity="0"/></radialGradient></defs>
+  <rect width="300" height="600" fill="url(#bg${k})"/>
+  <circle cx="40" cy="80" r="30" fill="#ffb347" opacity=".12"/><circle cx="262" cy="150" r="22" fill="#ffb347" opacity=".12"/>
+  <circle cx="54" cy="430" r="26" fill="#ff7aa0" opacity=".1"/><circle cx="252" cy="480" r="34" fill="#ffb347" opacity=".1"/>
+  <path d="${back}" fill="${hair}" ${O}/>
+  ${extraBack}
+  ${legs}
+  <path d="M104 222 Q118 204 136 200 L164 200 Q182 204 196 222 L190 300 L110 300 Z" fill="${skin}" ${O}/>
+  <path d="M136 160 L136 204 Q150 210 164 204 L164 160 Z" fill="${skin}" ${O}/>
+  <path d="M136 178 Q150 194 164 178 L164 190 Q150 200 136 190 Z" fill="${skinS}"/>
+
+  <path d="M104 222 L128 214 ${neckline} L196 222 Q${206 + bw} 262 188 300 Q${180 - wn} 316 ${182 - wn} 330 Q${208 + hx} ${hipY} ${bottom} Q${92 - hx} ${hipY} ${118 + wn} 330 Q${120 + wn} 316 112 300 Q${94 - bw} 262 104 222 Z" fill="${dress}" ${O}/>
+  ${t === 1 ? `<path d="M112 268 Q128 290 146 282" stroke="${dressS}" stroke-width="2.5" fill="none"/><path d="M188 268 Q172 290 154 282" stroke="${dressS}" stroke-width="2.5" fill="none"/>` : busts}
+  ${cleavage}
+  <path d="M140 352 Q134 ${(352 + hem) / 2} 128 ${hem - 4}" stroke="${dressS}" stroke-width="2" fill="none"/>
+  <path d="M162 352 Q168 ${(352 + hem) / 2} 174 ${hem - 4}" stroke="${dressS}" stroke-width="2" fill="none"/>
+  ${belt}${slit}${wrapLine}
+  ${limb('M108 226 Q76 262 84 292 Q92 316 120 326')}
+  <ellipse cx="123" cy="326" rx="10" ry="8" fill="${skin}" ${O}/>
+  ${limb('M192 226 Q218 262 214 296 Q210 280 194 250')}
+  <rect x="184" y="212" width="26" height="36" rx="3" fill="#f5a623" ${O}/>
+  <path d="M210 220 Q224 222 222 234 Q220 244 210 242" fill="none" ${O}/>
+  <path d="M182 214 Q188 202 197 208 Q204 200 212 210 L212 216 L182 216 Z" fill="#fff" ${O}/>
+  <ellipse cx="191" cy="248" rx="9" ry="11" fill="${skin}" ${O}/>
+  <path d="M100 100 Q98 40 150 36 Q202 40 200 100 Q200 146 178 170 Q160 186 150 186 Q140 186 122 170 Q100 146 100 100 Z" fill="${skin}" ${O}/>
+  <path d="M108 128 Q112 156 132 174" stroke="${skinS}" stroke-width="3" fill="none" opacity=".45" stroke-linecap="round"/>
+  <path d="M192 128 Q188 156 168 174" stroke="${skinS}" stroke-width="3" fill="none" opacity=".45" stroke-linecap="round"/>
+  <ellipse cx="120" cy="134" rx="11" ry="6" fill="#ff6f8f" opacity=".28"/><ellipse cx="180" cy="134" rx="11" ry="6" fill="#ff6f8f" opacity=".28"/>
+  ${eye(132, 1)}${eye(168, -1)}
+  <path d="M152 112 Q154 126 149 133" stroke="${skinS}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <path d="M143 135 Q146 139 150 137 Q154 139 157 135" stroke="${shade(skin, 0.65)}" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M${150 - lw} 155 Q${150 - lw * 0.5} 147 147 150 Q150 152 153 150 Q${150 + lw * 0.5} 147 ${150 + lw} 155 Q${150 + lw * 0.6} ${155 + lh} 150 ${155 + lh} Q${150 - lw * 0.6} ${155 + lh} ${150 - lw} 155 Z" fill="${lips}" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M${150 - lw} 155 Q150 ${158 + t * 0.5} ${150 + lw} 155" stroke="${shade(lips, 0.55)}" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <ellipse cx="148" cy="${155 + lh * 0.62}" rx="${4 + t * 1.5}" ry="${1.4 + t * 0.4}" fill="#fff" opacity=".5"/>
+  ${t === 3 ? `<circle cx="178" cy="150" r="2.2" fill="${D}"/>` : ''}
+  <path d="${front}" fill="${hair}" ${O}/>
+  <path d="M118 46 Q150 36 182 46" stroke="#fff" stroke-width="6" opacity=".22" fill="none" stroke-linecap="round"/>
+  ${extraFront}
+  ${jewels}
+</svg>`;
+}
+
+// Imagen generada (assets/lucia_1.webp, ...). Si no carga, se dibuja el SVG de respaldo.
+function setPortrait(el, i, t) {
+  el.innerHTML = `<img class="pimg" src="assets/${PHOTOS[i].img}_${t}.webp" alt="${PHOTOS[i].label}">`;
+  el.querySelector('img').onerror = () => { el.innerHTML = portrait(GIRLS[i], t); };
+}
+
+// Expresión de ella (assets/expr/). Lo que contestas la cambia: si te acerca, sonríe; si te aleja, se molesta.
+function setMood(m) {
+  if (!S) return;
+  S.mood = m;
+  const el = $('mood');
+  const lvl = S.lvl === 1 ? '' : '_' + S.lvl;
+  el.style.display = '';
+  el.onerror = () => { el.style.display = 'none'; };
+  el.src = `assets/expr/${PHOTOS[girlIdx].img}${lvl}_${m}.webp`;
+}
+function pickMood(i) {
+  if (i > 0 && S.tipsy >= 1 && Math.random() < 0.5) return 'achispada';
+  if (i >= 8) return Math.random() < 0.6 ? 'encantada' : 'coqueta';
+  if (i < 0) return Math.random() < 0.5 ? 'molesta' : 'aburrida';
+  return 'tranquila';
+}
+
+function drawGirl() {
+  setPortrait($('portrait'), girlIdx, S.lvl);
+  setMood(S.mood);
+  const w = PHOTOS[girlIdx].women[S.lvl - 1];
+  $('who').textContent = w.name + ', ' + w.age + ' años';
+}
+
+// ---------- Voz ----------
+function say(text) {
+  if (!$('voice').checked || !('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'es-ES';
+  u.pitch = Math.max(0, L[S.lvl].pitch + GIRLS[girlIdx].pitch);
+  u.rate = L[S.lvl].rate;
+  const v = speechSynthesis.getVoices().find(v => v.lang.startsWith('es'));
+  if (v) u.voice = v;
+  speechSynthesis.speak(u);
+}
+
+// ---------- Estado y barras ----------
+function clamp() {
+  S.pat = Math.max(0, Math.min(100, S.pat));
+  S.int = Math.max(0, Math.min(100, S.int));
+}
+
+function bars() {
+  clamp();
+  $('patN').textContent = Math.round(S.pat) + ' %';
+  $('intN').textContent = Math.round(S.int) + ' %';
+  $('pat').querySelector('.fill').style.width = S.pat + '%';
+  $('int').querySelector('.fill').style.width = S.int + '%';
+  $('need').textContent = 'Necesitas ' + L[S.lvl].need + ' % de interés para irte';
+  $('money').textContent = 'Dinero: ' + S.money + ' €';
+  $('home').disabled = S.over || S.talking;
+  renderBonus();
+}
+
+function log(who, text) {
+  const p = document.createElement('div');
+  p.textContent = who + ': ' + text;
+  $('log').prepend(p);
+}
+
+function herSpeaks(text) {
+  $('her').textContent = text;
+  log(PHOTOS[girlIdx].women[S.lvl - 1].name, text);
+  say(text);
+}
+
+// Elige algo que no se haya usado en la partida. Si se agota, vuelve a empezar esa lista.
+function pickFresh(list, used) {
+  let pool = list.filter(x => !used.includes(x));
+  if (!pool.length) {
+    for (let i = used.length - 1; i >= 0; i--) if (list.includes(used[i])) used.splice(i, 1);
+    pool = list.slice();
+  }
+  const x = rnd(pool);
+  used.push(x);
+  return x;
+}
+const rr = ([a, b]) => a + Math.floor(Math.random() * (b - a + 1));
+const fill = t => t.replace(/\{(\w+)\}/g, (_, k) => S.slots[k] ?? '');
+const wc = t => t.trim().split(/\s+/).length;
+
+// Monólogo de 15 a 25 s: tema + datos al azar, frases sin repetir, y una pregunta final.
+function buildSpeech(first) {
+  const l = L[S.lvl];
+  const secs = 15 + Math.floor(Math.random() * 11);
+  const words = Math.round(secs * WPS * l.rate) - (first ? wc(GIRLS[girlIdx].intro) : 0);
+  S.slots = {};
+  for (const k in SLOTS) S.slots[k] = rnd(SLOTS[k]);
+  const topic = pickFresh(TOPICS, S.usedTopics);
+  const parts = [fill(pickFresh(topic.open, S.usedSent))];
+  let count = wc(parts[0]);
+  while (count < words) {
+    const pool = topic.body.some(x => !S.usedSent.includes(x)) ? topic.body : FILLER;
+    parts.push(fill(pickFresh(pool, S.usedSent)));
+    count = wc(parts.join(' '));
+  }
+  // Termina con una pregunta concreta; las respuestas del hombre contestan a ESA pregunta.
+  const ask = pickFresh(topic.asks, S.usedSent);
+  parts.push(fill(ask.q));
+  let text = parts.join(' ') + rnd(l.suffix);
+  if (first) text = GIRLS[girlIdx].intro + ' ' + text;
+  return {text, secs, ask};
+}
+
+// Tres respuestas a la última pregunta de ella, en orden aleatorio:
+// una que la acerca a casa (sube su interés), una neutra (no suma ni resta)
+// y una que la aleja (baja su interés). La paciencia no cambia con la respuesta.
+function makeOptions() {
+  const a = S.ask;
+  return [
+    {t: fill(pickFresh(a.good, S.usedReply)), i: rr([8, 12]), p: 0},
+    {t: fill(pickFresh(a.neutral, S.usedReply)), i: 0, p: 0},
+    {t: fill(pickFresh(a.bad, S.usedReply)), i: rr([-10, -6]), p: 0}
+  ].sort(() => Math.random() - 0.5);
+}
+
+// ---------- Opciones y extras ----------
+function renderOpts() {
+  const box = $('opts');
+  box.innerHTML = '';
+  S.opts.forEach(r => {
+    const b = document.createElement('button');
+    b.textContent = r.t;
+    b.disabled = S.talking || S.over;
+    b.onclick = () => answer(r);
+    box.appendChild(b);
+  });
+  if (S.talking) {
+    const p = document.createElement('p');
+    p.className = 'hint';
+    p.style.gridColumn = '1 / -1';
+    p.textContent = '🗣️ Ella está hablando...';
+    box.appendChild(p);
+    const skip = document.createElement('button');
+    skip.className = 'gift';
+    skip.style.gridColumn = '1 / -1';
+    skip.textContent = '⏭ Saltar y contestar';
+    skip.onclick = skipSpeech;
+    box.appendChild(skip);
+  }
+}
+
+// Ella habla; cuando termina, aparecen tus tres respuestas.
+function speak(first) {
+  const sp = buildSpeech(first);
+  S.ask = sp.ask;
+  herSpeaks(sp.text);
+  S.talking = true;
+  S.opts = [];
+  renderOpts();
+  bars();
+  applyMusic();
+  clearTimeout(S.timer);
+  S.timer = setTimeout(endSpeech, sp.secs * 1000);
+}
+
+// Fin de la charla: aparecen tus tres respuestas.
+function endSpeech() {
+  S.talking = false;
+  S.opts = makeOptions();
+  renderOpts();
+  bars();
+  applyMusic();
+}
+
+// Botón "Saltar": corta la espera y permite contestar ya (el texto ya está en pantalla).
+function skipSpeech() {
+  if (!S || !S.talking || S.over) return;
+  clearTimeout(S.timer);
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+  endSpeech();
+}
+
+// Extras: cuestan dinero o usos. Cada uno ocupa un turno.
+const EXTRAS = {
+  beerHer:  {label: () => '🍺 Cerveza para ella (6 €)', ok: () => S.money >= 6,
+    run() { S.money -= 6; S.int += 12; S.tipsy++; setMood('achispada'); log('Tú', 'Una cerveza para ella.'); }},
+  beerMe:   {label: () => '🍺 Cerveza para ti (4 €)', ok: () => S.money >= 4,
+    run() { S.money -= 4; S.pat += 20; S.drunk++; log('Tú', 'Una cerveza para ti.'); }},
+  smoke:    {label: () => '🚬 Salir a fumar (quedan ' + (2 - S.smokes) + ')', ok: () => S.smokes < 2,
+    run() { S.smokes++; S.pat += 25; S.int -= 6; log('Tú', 'Salgo a fumar un rato.'); }},
+  bath:     {label: () => '🚻 Ir al baño (quedan ' + (2 - S.baths) + ')', ok: () => S.baths < 2,
+    run() { S.baths++; S.pat += 15; S.int -= 4; log('Tú', 'Voy al baño un momento.'); }}
+};
+
+function renderBonus() {
+  const box = $('bonus');
+  box.innerHTML = '';
+  Object.entries(EXTRAS).forEach(([k, e]) => {
+    const b = document.createElement('button');
+    b.className = 'gift';
+    b.textContent = e.label();
+    b.disabled = S.over || S.talking || !e.ok();
+    b.onclick = () => useExtra(k);
+    box.appendChild(b);
+  });
+}
+
+function useExtra(k) {
+  if (S.over || !EXTRAS[k].ok()) return;
+  EXTRAS[k].run();
+  nextTurn();
+}
+
+function finish(win, msg) {
+  S.over = true;
+  S.talking = false;
+  clearTimeout(S.timer);
+  applyMusic();
+  $('game').classList.add('hidden');
+  $('end').classList.remove('hidden');
+  $('endTxt').textContent = (win ? 'Ganas. ' : 'Pierdes. ') + msg;
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+}
+
+function checkEnd() {
+  if (S.pat <= 0) { finish(false, 'Te has ido a mitad de la cita. Ella sigue hablando con el camarero.'); return true; }
+  if (S.int <= 0) { finish(false, 'Ella se ha cansado de tanto hablar y se ha ido con su amiga.'); return true; }
+  return false;
+}
+
+// ---------- Turnos ----------
+function nextTurn() {
+  bars();
+  if (checkEnd()) return;
+  const l = L[S.lvl];
+  // Con dos cervezas ella habla más, y le cuesta más seguirla.
+  S.pat -= l.drain + Math.floor(Math.random() * 4) + (S.tipsy >= 2 ? 2 : 0);
+  S.int -= l.decay;
+  S.turn++;
+  bars();
+  if (checkEnd()) return;
+  speak(false);
+}
+
+function answer(r) {
+  // Con dos cervezas tuyas te sale mejor la charla.
+  setMood(pickMood(r.i));
+  S.int += r.i + (S.drunk >= 2 ? 1 : 0);
+  S.pat += r.p;
+  log('Tú', r.t);
+  nextTurn();
+}
+
+function propose() {
+  if (S.over) return;
+  if (S.int >= L[S.lvl].need) {
+    const next = recordWin();
+    finish(true, 'Ella acepta. "Vale, vámonos a mi casa." Tu paciencia aguanta hasta la puerta. Turno ' + S.turn + '.' +
+      (next ? ' Nivel ' + next + ' desbloqueado.' : ''));
+    return;
+  }
+  log('Tú', '¿Nos vamos a mi casa?');
+  S.int -= 10;
+  S.pat -= 10;
+  bars();
+  if (checkEnd()) return;
+  setMood('molesta');
+  herSpeaks(LINE_NO);
+  S.opts = makeOptions();
+  renderOpts();
+  bars();
+}
+
+function start(lvl) {
+  if (lvl > unlockedLevel()) return;
+  if (S) clearTimeout(S.timer);
+  S = {lvl, pat: 100, int: 30, money: L[lvl].money, turn: 0, over: false,
+       tipsy: 0, drunk: 0, smokes: 0, baths: 0, talking: false, opts: [], timer: null, mood: 'tranquila',
+       slots: {}, usedTopics: [], usedSent: [], usedReply: [], ask: null};
+  $('start').classList.add('hidden');
+  $('end').classList.add('hidden');
+  $('game').classList.remove('hidden');
+  $('log').innerHTML = '';
+  drawGirl();
+  bars();
+  speak(true);
+}
+
+// Selector de chica en la pantalla de inicio
+function renderGirls() {
+  const box = $('girls');
+  box.innerHTML = '';
+  PHOTOS.forEach((p, i) => {
+    const d = document.createElement('div');
+    d.className = 'portrait' + (i === girlIdx ? ' sel' : '');
+    d.innerHTML = '<div class="pbox"></div><small>' + p.label + '</small>';
+    setPortrait(d.querySelector('.pbox'), i, 1);
+    d.onclick = () => { girlIdx = i; renderGirls(); };
+    box.appendChild(d);
+  });
+}
+
+// ---------- Cuentas (guardadas en este navegador) ----------
+const DB = {
+  get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+const SCREENS = ['auth', 'menu', 'start', 'game', 'end', 'rank'];
+function show(id) { SCREENS.forEach(s => $(s).classList.toggle('hidden', s !== id)); }
+const hex = b => Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+const unhex = h => Uint8Array.from(h.match(/../g), x => parseInt(x, 16));
+async function hashPass(pass, saltHex) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({name: 'PBKDF2', salt: unhex(saltHex), iterations: 100000, hash: 'SHA-256'}, key, 256);
+  return hex(new Uint8Array(bits));
+}
+const session = () => DB.get('ts_session', null);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+
+let authMode = 'login';
+function authErr(msg) { $('authErr').textContent = msg; }
+function setAuthMode(m) {
+  authMode = m;
+  $('authTitle').textContent = m === 'login' ? 'Entrar' : 'Crear cuenta';
+  $('authBtn').textContent = m === 'login' ? 'Entrar' : 'Crear cuenta';
+  $('authSwitch').textContent = m === 'login' ? '¿No tienes cuenta? Crear una' : '¿Ya tienes cuenta? Entrar';
+  authErr('');
+}
+$('authSwitch').onclick = () => setAuthMode(authMode === 'login' ? 'register' : 'login');
+
+$('authForm').onsubmit = async e => {
+  e.preventDefault();
+  const name = $('authUser').value.trim(), pass = $('authPass').value, key = name.toLowerCase();
+  if (!/^[a-zA-Z0-9_]{3,16}$/.test(name)) return authErr('Usuario: de 3 a 16 letras, números o _.');
+  if (pass.length < 4) return authErr('La contraseña necesita al menos 4 caracteres.');
+  if (!crypto.subtle) return authErr('Este navegador no puede cifrar contraseñas aquí.');
+  const users = DB.get('ts_users', {});
+  try {
+    if (authMode === 'register') {
+      if (users[key]) return authErr('Ese usuario ya existe.');
+      const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
+      users[key] = {name, salt, hash: await hashPass(pass, salt)};
+      DB.set('ts_users', users);
+    } else {
+      const rec = users[key];
+      if (!rec || await hashPass(pass, rec.salt) !== rec.hash) return authErr('Usuario o contraseña incorrectos.');
+    }
+  } catch (err) { return authErr('No se pudo comprobar la contraseña. Inténtalo otra vez.'); }
+  DB.set('ts_session', key);
+  $('authPass').value = '';
+  goMenu();
+};
+
+function goMenu() {
+  $('welcome').textContent = 'Hola, ' + DB.get('ts_users', {})[session()].name + '.';
+  show('menu');
+}
+// Nivel máximo desbloqueado por el usuario actual (empieza en 1).
+function unlockedLevel() {
+  const key = session();
+  return key ? DB.get('ts_progress', {})[key] || 1 : 1;
+}
+// Marca como bloqueados los niveles que aún no se han ganado.
+function renderLevels() {
+  const max = unlockedLevel();
+  document.querySelectorAll('[data-lvl]').forEach(b => {
+    const n = Number(b.dataset.lvl);
+    if (!b.dataset.label) b.dataset.label = b.textContent;
+    b.disabled = n > max;
+    b.textContent = b.dataset.label + (n > max ? ' 🔒' : '');
+  });
+}
+$('mPlay').onclick = () => { renderLevels(); show('start'); };
+$('mRank').onclick = () => { renderRank(); show('rank'); };
+$('mLogout').onclick = () => { DB.set('ts_session', null); setAuthMode('login'); show('auth'); };
+$('startBack').onclick = goMenu;
+$('endMenu').onclick = goMenu;
+$('rankBack').onclick = goMenu;
+
+// ---------- Ranking ----------
+// Puntos de una victoria = nivel × 100 + paciencia que te queda. Se guarda la mejor marca por usuario.
+// Devuelve el nivel recién desbloqueado (0 si no hay ninguno).
+function recordWin() {
+  const key = session();
+  if (!key) return 0;
+  const sc = DB.get('ts_scores', {}), rec = DB.get('ts_users', {})[key];
+  const e = sc[key] || {name: rec ? rec.name : key, best: 0, lvl: 0, wins: 0};
+  const pts = S.lvl * 100 + Math.round(S.pat);
+  e.wins++;
+  if (pts > e.best) { e.best = pts; e.lvl = S.lvl; }
+  sc[key] = e;
+  DB.set('ts_scores', sc);
+  // Ganar el nivel actual desbloquea el siguiente (máximo nivel 3).
+  const prog = DB.get('ts_progress', {});
+  const next = S.lvl + 1;
+  if (S.lvl === (prog[key] || 1) && next <= 3) {
+    prog[key] = next;
+    DB.set('ts_progress', prog);
+    return next;
+  }
+  return 0;
+}
+
+function renderRank() {
+  const rows = Object.values(DB.get('ts_scores', {})).sort((a, b) => b.best - a.best).slice(0, 20);
+  $('rankList').innerHTML = rows.length
+    ? '<table class="rank"><tr><th>#</th><th>Usuario</th><th>Puntos</th><th>Nivel</th><th>Victorias</th></tr>' +
+      rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.name)}</td><td>${r.best}</td><td>${r.lvl}</td><td>${r.wins}</td></tr>`).join('') +
+      '</table>'
+    : '<p class="hint">Todavía nadie ha ganado. ¡Sé el primero!</p>';
+}
+
+renderGirls();
+document.querySelectorAll('[data-lvl]').forEach(b => b.onclick = () => start(Number(b.dataset.lvl)));
+$('home').onclick = propose;
+$('again').onclick = () => {
+  $('end').classList.add('hidden');
+  $('start').classList.remove('hidden');
+};
+
+// ---------- Música (una sola pista en bucle para menú y partida) ----------
+const music = new Audio('assets/audio/tenderness.mp3');
+music.loop = true;
+let audioPref = DB.get('ts_audio', {muted: false, vol: 0.35});
+function applyMusic() {
+  music.volume = audioPref.vol * (S && S.talking ? 0.4 : 1);   // más bajo mientras ella habla
+  music.muted = audioPref.muted;
+  $('music').textContent = audioPref.muted ? '🔇' : '🎵';
+  $('vol').value = audioPref.vol;
+}
+// Los navegadores solo dejan reproducir tras una interacción: se intenta con la primera pulsación.
+function startMusic() {
+  applyMusic();
+  if (!audioPref.muted && music.paused) music.play().catch(() => {});
+}
+document.addEventListener('pointerdown', startMusic);
+$('music').onclick = () => {
+  audioPref.muted = !audioPref.muted;
+  DB.set('ts_audio', audioPref);
+  startMusic();
+};
+$('vol').oninput = e => {
+  audioPref.vol = Number(e.target.value);
+  DB.set('ts_audio', audioPref);
+  applyMusic();
+};
+
+// Arranque: si hay sesión válida, al menú; si no, a entrar.
+if (session() && DB.get('ts_users', {})[session()]) goMenu(); else show('auth');
+</script>
+</body>
+</html>

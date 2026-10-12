@@ -8,7 +8,7 @@
 :root{--bg:#1b1420;--card:#2a1f30;--txt:#f6eef8;--mute:#b8a7c0;--ok:#7ed39a;--acc:#ffb347}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,sans-serif;min-height:100vh;display:flex;justify-content:center}
-main{width:100%;max-width:560px;padding:16px;display:flex;flex-direction:column;gap:14px}
+main{width:100%;max-width:1040px;padding:16px;display:flex;flex-direction:column;gap:14px}
 h1{font-size:1.4rem;margin:8px 0 0}
 .bars{display:grid;gap:8px}
 .bar label{display:flex;justify-content:space-between;font-size:.85rem;color:var(--mute)}
@@ -23,6 +23,8 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:linear-grad
 .scene{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:start}
 .portrait svg{width:100%;height:auto;border-radius:10px;display:block}
 .pimg{width:100%;height:auto;border-radius:10px;display:block}
+.dancing img{animation:sway 1.2s ease-in-out infinite}
+@keyframes sway{0%,100%{transform:rotate(-2deg) translateY(0)}50%{transform:rotate(2deg) translateY(-4px)}}
 .portraitWrap{position:relative;max-width:180px}
 /* Medallón con la expresión de ella, sobre la esquina de la foto */
 .mood{position:absolute;right:-8px;bottom:-8px;width:34%;aspect-ratio:1/1;object-fit:cover;border-radius:50%;border:3px solid var(--acc);box-shadow:0 2px 8px rgba(0,0,0,.5)}
@@ -55,6 +57,16 @@ label.chk{font-size:.9rem;color:var(--mute);display:flex;gap:6px;align-items:cen
 table.rank{width:100%;border-collapse:collapse;font-size:.95rem}
 table.rank th,table.rank td{padding:8px 6px;text-align:left;border-bottom:1px solid #3b2d44}
 table.rank th{color:var(--mute);font-weight:normal;font-size:.85rem}
+/* Pantalla de partida: texto a la izquierda, chica a la derecha */
+#auth,#menu,#rank,#start,#end{max-width:560px;margin:0 auto;width:100%}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+.side{display:flex;flex-direction:column;gap:12px;min-width:0}
+.stage{position:relative;height:min(84vh,780px);border-radius:16px;overflow:hidden;background:rgba(20,10,26,.45)}
+.layer{position:absolute;inset:0;margin:auto;width:100%;height:100%;object-fit:contain}
+.layer.dancing{animation:bob .7s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.beer{position:absolute;right:6%;bottom:12%;width:20%;height:auto;object-fit:contain;z-index:2}
+@media (max-width:760px){.layout{grid-template-columns:1fr}.stage{order:-1;height:52vh}}
 </style>
 </head>
 <body>
@@ -107,30 +119,37 @@ table.rank th{color:var(--mute);font-weight:normal;font-size:.85rem}
   </section>
 
   <section id="game" class="hidden">
-    <div class="bars">
-      <div class="bar" id="pat"><label><span>Tu paciencia</span><span id="patN"></span></label><div class="track"><div class="fill"></div></div></div>
-      <div class="bar" id="int"><label><span>Interés de ella</span><span id="intN"></span></label><div class="track"><div class="fill"></div></div></div>
-    </div>
-    <div class="row" style="justify-content:space-between">
-      <span class="money" id="money"></span>
-      <span class="hint" id="need"></span>
-    </div>
-    <div class="card scene">
-      <div class="portraitWrap">
-        <div class="portrait" id="portrait"></div>
-        <img id="mood" class="mood" alt="">
+    <div class="layout">
+      <div class="side">
+        <div class="bars">
+          <div class="bar" id="pat"><label><span>Tu paciencia</span><span id="patN"></span></label><div class="track"><div class="fill"></div></div></div>
+          <div class="bar" id="int"><label><span>Interés de ella</span><span id="intN"></span></label><div class="track"><div class="fill"></div></div></div>
+        </div>
+        <div class="row" style="justify-content:space-between">
+          <span class="money" id="money"></span>
+          <span class="hint" id="need"></span>
+        </div>
+        <div class="card">
+          <div class="who" id="who"></div>
+          <div id="her"></div>
+        </div>
+        <div class="opts" id="opts"></div>
+        <div class="bonus" id="bonus"></div>
+        <div class="card hidden" id="musicPanel">
+          <h2 id="musicTitle">Elige género</h2>
+          <div class="opts" id="musicList"></div>
+          <div class="row"><button id="musicClose" class="gift">Cerrar</button></div>
+        </div>
+        <div class="row"><button id="home" class="danger">Proponer irnos a casa</button></div>
+        <div class="log" id="log"></div>
       </div>
-      <div>
-        <div class="who" id="who"></div>
-        <div id="her"></div>
+      <div class="stage" id="stage">
+        <img id="wide" class="layer" alt="">
+        <img id="close" class="layer hidden" alt="">
+        <img id="beer" class="beer hidden" src="assets/extras/cerveza.png" alt="">
       </div>
     </div>
-    <div class="opts" id="opts"></div>
-    <div class="bonus" id="bonus"></div>
-    <div class="row"><button id="home" class="danger">Proponer irnos a casa</button></div>
-    <div class="log" id="log"></div>
   </section>
-
   <section id="end" class="card hidden">
     <div class="end" id="endTxt"></div>
     <div class="row"><button id="again">Otra vez</button><button id="endMenu" class="gift">Menú</button></div>
@@ -164,8 +183,8 @@ const GIRLS = [
 // Grupos seleccionables (índices 0 y 1 de GIRLS). Cada nivel es una mujer distinta;
 // la del nivel 3 es la original (Lucía o Marta). Nombres y edades provisionales.
 const PHOTOS = [
-  {img: 'lucia', label: 'Vestido fucsia', women: [{name: 'Carla', age: 25}, {name: 'Irene', age: 27}, {name: 'Lucía', age: 24}]},
-  {img: 'marta', label: 'Vestido azul', women: [{name: 'Elena', age: 27}, {name: 'Nadia', age: 30}, {name: 'Marta', age: 28}]}
+  {img: 'lucia', label: 'Vestido fucsia', intros: ["Hola, perdona, ¿llevas mucho esperando? Yo siempre llego tarde, pero hablo por las dos.", "Ya pensaba que no ibas a venir. Bueno, aquí estoy yo, con mi retraso de siempre.", "Perdona el retraso, es que el taxi me ha hablado durante todo el trayecto.", "Ay, qué bien que ya estás aquí. Llevo media hora dándole vueltas a qué ponerme.", "Hola. Ya me he tomado un vino para calmarme, así que ten paciencia conmigo."], women: [{name: 'Carla', age: 25}, {name: 'Irene', age: 27}, {name: 'Lucía', age: 24}]},
+  {img: 'marta', label: 'Vestido azul', intros: ["Vaya, por fin alguien puntual. Ya me empezaba a preocupar.", "Hola, siéntate, que llevo un rato mirando la puerta como una tonta.", "Me alegra que hayas venido. Este bar tiene música buenísima, ¿no crees?", "Qué bien, pensé que me habían dado plantón. Ya tenemos algo de qué hablar.", "Hola. Me han recomendado esta coctelería y tenía que comprobarlo."], women: [{name: 'Elena', age: 27}, {name: 'Nadia', age: 30}, {name: 'Marta', age: 28}]}
 ];
 
 // ---------- Conversaciones ----------
@@ -181,35 +200,35 @@ const SLOTS = {
   ex: ['mi ex', 'mi último novio', 'un chico de mi oficina', 'mi exmarido']
 };
 const TOPICS = [
-  {open: ['Perdona, es que {mascota} se ha comido un calcetín y todavía estoy nerviosa.', '¿Sabes que tengo un perro que se llama {mascota}? Es lo más mona del mundo.'],
-   body: ['Lo llevo al veterinario cada dos por tres, que es carísimo, pero no lo cambio por nada.', 'Una vez se escapó y lo encontré en la panadería de la esquina, comiéndose un croissant.', 'Tiene la manía de dormir solo si le pongo la radio de los años ochenta.', 'Dicen que los perros se parecen a sus dueños. No sé si es verdad, pero él seguro que sí.'],
+  {open: ["Perdona, es que {mascota} se ha comido un calcetín y todavía estoy nerviosa.", "¿Sabes que tengo un perro que se llama {mascota}? Es lo más mona del mundo.", "Hoy {mascota} me ha despertado a las seis subiéndose a la cama.", "Si ves a un perro con cara de haber hecho algo malo, seguro que es {mascota}.", "Mi vida gira alrededor de {mascota}, y no me avergüenza decirlo.", "Ayer {mascota} se coló en la cocina y se comió media tarta de queso."],
+   body: ["Lo llevo al veterinario cada dos por tres, que es carísimo, pero no lo cambio por nada.", "Una vez se escapó y lo encontré en la panadería de la esquina, comiéndose un croissant.", "Tiene la manía de dormir solo si le pongo la radio de los años ochenta.", "Dicen que los perros se parecen a sus dueños. No sé si es verdad, pero él seguro que sí.", "Cuando llueve se mete debajo de la mesa y no hay quien lo saque.", "Le compré un juguete caro y prefiere una botella de plástico vacía.", "Me mira como si entendiera todo lo que digo, y a veces me da miedo.", "Lo bañé el domingo y tardó dos días en perdonarme."],
    asks: [
      {q: '¿Tú tienes animales o te dan miedo?',
-      good: ['Me encantan los animales. Y uno que se llama {mascota} me gana desde ya.', 'Tengo un gato que me odia. Me gustaría conocer a {mascota} a ver si a él le caigo mejor.'],
+      good: ['Me encantan los animales. Y si tienen nombre y carácter, me ganan desde ya.', 'Tengo un gato que me odia. Me gustaría conocer a tu perro a ver si a él le caigo mejor.'],
       neutral: ['Pues depende del animal, la verdad.', 'Jaja, ya veo. ¿Y qué pasó al final con el calcetín?'],
       bad: ['A mí los animales me dan igual, la verdad.', 'Pues a mí me dan un poco de asco.']},
      {q: '¿Tú prefieres perros o gatos? No me digas gatos, por favor.',
-      good: ['Perros, sin duda. Y si son como {mascota}, mejor todavía.', 'Perros siempre. Me encantaría ver a {mascota} con su radio de los ochenta.'],
+      good: ['Perros, sin duda. Y si son como el tuyo, mejor todavía.', 'Perros siempre. Me encantaría ver a tu perro con su radio de los ochenta.'],
       neutral: ['Pues no tengo preferencia.', 'Mmm, depende del día.'],
       bad: ['Gatos, y no pienso disculparme.', 'Gatos, claramente. Los perros son muy pesados.']}
    ]},
-  {open: ['El año pasado estuve en {ciudad} y todavía sueño con sus calles.', 'Estoy pensando en irme a vivir a {ciudad}. ¿Tú qué opinas?'],
-   body: ['Allí las terrazas duran hasta las tres de la mañana, y nadie tiene prisa por nada.', 'Me perdí tres veces el primer día, pero encontré una librería que me cambió la vida.', 'Mi amiga dice que la comida es mejor que en ningún otro sitio. Yo no la contradigo.', 'Lo malo es que nunca aprendí bien el idioma, así que me pasé la semana señalando cosas.'],
+  {open: ["El año pasado estuve en {ciudad} y todavía sueño con sus calles.", "Estoy pensando en irme a vivir a {ciudad}. ¿Tú qué opinas?", "Hay una ciudad que me cambió la forma de ver las cosas: {ciudad}.", "Me pasé una semana en {ciudad} sin hacer nada, y fue lo mejor del año.", "Si me dieran un billete para mañana, elegiría {ciudad} sin pensarlo.", "Mi abuela decía que {ciudad} huele a café y a lluvia. Y tenía razón."],
+   body: ["Allí las terrazas duran hasta las tres de la mañana, y nadie tiene prisa por nada.", "Me perdí tres veces el primer día, pero encontré una librería que me cambió la vida.", "Mi amiga dice que la comida es mejor que en ningún otro sitio. Yo no la contradigo.", "Lo malo es que nunca aprendí bien el idioma, así que me pasé la semana señalando cosas.", "Compré un mapa de papel y lo llevé como si fuera un tesoro.", "Había un señor que tocaba el violín en la plaza todas las tardes, sin público.", "Me subí a un tranvía sin saber a dónde iba, y acabé en el mejor sitio del viaje.", "Lo que más echo de menos es el ruido de las bicis por la noche."],
    asks: [
      {q: '¿Tú has viajado mucho o eres de quedarte en casa?',
-      good: ['Viajo lo justo, pero contigo a {ciudad} iría ya mismo.', 'Me encanta viajar, y tú me has dado ganas de ir a {ciudad}.'],
+      good: ['Viajo lo justo, pero contigo me iría ya mismo.', 'Me encanta viajar, y tú me has dado ganas de ir contigo.'],
       neutral: ['Un poco de cada cosa, la verdad.', 'Depende de la época del año.'],
       bad: ['Prefiero quedarme en casa, viajar cansa mucho.', 'No viajo nunca, y no entiendo a la gente que lo hace.']},
      {q: '¿Tienes algún lugar al que volverías siempre?',
-      good: ['Ahora mismo, este bar. Y tú eres buena parte del motivo.', 'Volvería a {ciudad} contigo sin pensarlo.'],
+      good: ['Ahora mismo, este bar. Y tú eres buena parte del motivo.', 'Volvería contigo a cualquier sitio sin pensarlo.'],
       neutral: ['Pues no sé, hay muchos.', 'Uno de playa, supongo.'],
       bad: ['Ninguno. Me gusta cambiar de sitio.', 'Ninguno, la verdad. Me aburren los sitios repetidos.']}
    ]},
-  {open: ['Trabajo de {trabajo} desde hace años y la gente siempre me pregunta lo mismo.', 'Del trabajo de {trabajo} hay cosas que nadie se imagina.'],
-   body: ['Hay días buenos, días malos y un jefe que cree que sabe más que yo de todo.', 'Mi compañera y yo hacemos apuestas sobre quién llega antes al café de la mañana.', 'Me encanta, aunque a veces me levanto pensando si cerré la puerta del trabajo.', 'Lo mejor es cuando alguien se va contento y te escribe una tarjeta.'],
+  {open: ["Trabajo de {trabajo} desde hace años y la gente siempre me pregunta lo mismo.", "Del trabajo de {trabajo} hay cosas que nadie se imagina.", "Hoy me ha llamado mi jefe un domingo, y ya sabes lo que eso significa.", "Mi primer día como {trabajo} fue un desastre total, y de eso me acuerdo mucho.", "Si algo he aprendido siendo {trabajo}, es que la gente siempre tiene prisa.", "La semana pasada un cliente me dejó la reseña más bonita de mi vida."],
+   body: ["Hay días buenos, días malos y un jefe que cree que sabe más que yo de todo.", "Mi compañera y yo hacemos apuestas sobre quién llega antes al café de la mañana.", "Me encanta, aunque a veces me levanto pensando si cerré la puerta del trabajo.", "Lo mejor es cuando alguien se va contento y te escribe una tarjeta.", "Tengo una libreta llena de anécdotas que no contaría ni en una boda.", "Una vez me quedé encerrada en la oficina tres horas y el vigilante me tuvo que rescatar.", "Mi madre sigue sin entender qué hago exactamente, y yo tampoco se lo explico bien.", "Los lunes son horribles, pero el viernes a las cinco compensa todo."],
    asks: [
      {q: '¿Y tú a qué te dedicas? Y no me digas que no trabajas.',
-      good: ['Trabajo mucho, pero me encanta. Y seguro que lo mío no es tan interesante como tu trabajo de {trabajo}.', 'Lo mío es algo que me apasiona, aunque hoy prefiero escucharte a ti.'],
+      good: ['Trabajo mucho, pero me encanta. Y seguro que lo mío no es tan interesante como lo tuyo.', 'Lo mío es algo que me apasiona, aunque hoy prefiero escucharte a ti.'],
       neutral: ['Algo de oficina, nada especial.', 'Ahora mismo estoy con un proyecto, nada fuera de lo normal.'],
       bad: ['No trabajo, y tampoco pienso explicarlo.', 'Eso no te importa mucho ahora, ¿no?']},
      {q: '¿Te gusta lo que haces o estás esperando a otra cosa?',
@@ -217,8 +236,8 @@ const TOPICS = [
       neutral: ['Me gusta a ratos, como casi todo.', 'Pues depende del mes.'],
       bad: ['Estoy esperando el fin de semana, la verdad.', 'Estoy deseando irme de aquí, si te soy sincero.']}
    ]},
-  {open: ['Desde que empecé con {hobby} no puedo parar. Es mi vicio secreto.', 'Me apunté a un curso y empecé con {hobby}. Lo dejé todo, pero me encanta empezar cosas.'],
-   body: ['Hice una pieza horrible la primera semana, pero ahora la tengo en el salón como un trofeo.', 'Tengo una libreta llena de ideas que todavía no he probado, y eso me tiene contenta.', 'Mi madre dice que me aburro en cuanto le cojo el truco, y en parte tiene razón.', 'Lo que más me gusta es el momento en que sale bien y no sabes ni cómo.'],
+  {open: ["Desde que empecé con {hobby} no puedo parar. Es mi vicio secreto.", "Me apunté a un curso y empecé con {hobby}. Lo dejé todo, pero me encanta empezar cosas.", "Tengo la casa llena de cosas que hice con {hobby}, y casi todas salieron mal.", "Hay gente que va al gimnasio; yo prefiero {hobby} para desconectar.", "Mi hermana dice que {hobby} es de abuelas, pero a mí me relaja muchísimo.", "Ayer conseguí terminar algo con {hobby} y casi lloro de la emoción."],
+   body: ["Hice una pieza horrible la primera semana, pero ahora la tengo en el salón como un trofeo.", "Tengo una libreta llena de ideas que todavía no he probado, y eso me tiene contenta.", "Mi madre dice que me aburro en cuanto le cojo el truco, y en parte tiene razón.", "Lo que más me gusta es el momento en que sale bien y no sabes ni cómo.", "Compré material para tres proyectos a la vez, y solo he empezado uno.", "La profesora me dice que tengo buena mano, aunque yo no lo veo.", "Una vez me manché hasta el pelo y tardé un día entero en quitármelo.", "Me gusta porque no tengo que pensar en nada mientras lo hago."],
    asks: [
      {q: '¿Tú tienes algún hobby raro o eres de los que ven series?',
       good: ['Veo series, pero cambiaría una temporada entera por una tarde contigo.', 'Tengo uno raro, la verdad. Me gustaría enseñártelo esta noche.'],
@@ -229,8 +248,8 @@ const TOPICS = [
       neutral: ['Sí, claro, a todos nos pasa.', 'Alguna vez, sí.'],
       bad: ['No, yo termino todo lo que empiezo.', 'Eso es de gente sin constancia.']}
    ]},
-  {open: ['¿Sabías que {tema} tienen una vida mucho más interesante de lo que parece?', 'Ayer vi un documental sobre {tema} y ya no puedo pensar en otra cosa.'],
-   body: ['Parece que no hacen nada, pero en realidad están resolviendo problemas todo el día.', 'El narrador hablaba con una voz tan seria que me emocioné con cada detalle.', 'Mi hermano dice que soy demasiado intensa con estos temas. Puede que tenga razón.', 'Después de verlo me pasé una hora leyendo en internet hasta las tantas.'],
+  {open: ["¿Sabías que {tema} tienen una vida mucho más interesante de lo que parece?", "Ayer vi un documental sobre {tema} y ya no puedo pensar en otra cosa.", "Nunca pensé que me fascinarían {tema}, pero mira, aquí estoy.", "Mi sobrino me preguntó por {tema} y no supe qué contestarle.", "Hay un libro entero sobre {tema}, y me lo leí en dos noches.", "Si alguien me pregunta por {tema}, puedo estar una hora hablando."],
+   body: ["Parece que no hacen nada, pero en realidad están resolviendo problemas todo el día.", "El narrador hablaba con una voz tan seria que me emocioné con cada detalle.", "Mi hermano dice que soy demasiado intensa con estos temas. Puede que tenga razón.", "Después de verlo me pasé una hora leyendo en internet hasta las tantas.", "Hay datos que no me creo, y los he comprobado tres veces por si acaso.", "Lo más bonito es que nadie sabe del todo cómo funcionan.", "Una vez intenté explicárselo a mi madre y acabamos hablando de otra cosa.", "Me hizo reflexionar sobre cosas que nunca había pensado."],
    asks: [
      {q: '¿Tú sabías algo de eso o es la primera vez que lo oyes?',
       good: ['Sabía algo, pero tú lo cuentas mucho mejor.', 'No, y ahora quiero saberlo todo contigo.'],
@@ -241,8 +260,8 @@ const TOPICS = [
       neutral: ['A veces, sí.', 'Pues puede ser, no sé.'],
       bad: ['No, la verdad es que miro el reloj mucho.', 'Nada en especial. Y ya es tardísimo.']}
    ]},
-  {open: ['{ex} decía que yo hablo demasiado. Dime la verdad, ¿hablo demasiado?', 'Antes pensaba que el amor era cuestión de química. Ahora ya no sé nada.'],
-   body: ['Desde entonces intento escuchar más, pero me sale una idea cada tres segundos.', 'Mi madre dice que los hombres que no hablan esconden algo. Yo creo que es exagerado.', 'La última vez que salí con alguien acabé contándole mi vida entera antes del segundo plato.', 'Quizá me gusta llenar los silencios, y los silencios me dan vértigo.'],
+  {open: ["{ex} decía que yo hablo demasiado. Dime la verdad, ¿hablo demasiado?", "Antes pensaba que el amor era cuestión de química. Ahora ya no sé nada.", "Esta noche me he prometido no contarte nada de {ex}. Ya llevo tres minutos.", "Me pregunto si las primeras citas siempre son así de raras.", "La última vez que salí con alguien me pasé la cena hablando de mis plantas.", "Mi amiga dice que tengo que dejar de analizarlo todo, y tiene razón."],
+   body: ["Desde entonces intento escuchar más, pero me sale una idea cada tres segundos.", "Mi madre dice que los hombres que no hablan esconden algo. Yo creo que es exagerado.", "La última vez que salí con alguien acabé contándole mi vida entera antes del segundo plato.", "Quizá me gusta llenar los silencios, y los silencios me dan vértigo.", "Tengo la costumbre de contestar a todo antes de que me terminen la pregunta.", "Una vez me quedé dormida en el sofá mientras alguien me explicaba su tesis.", "Me encanta escuchar, pero cuando empiezo a hablar ya no paro.", "Ni yo misma sé cuándo fue la última vez que me callé en una cita."],
    asks: [
      {q: '¿Tú eres de los que llenan silencios o de los que se quedan callados?',
       good: ['Yo escucho muy bien, así que llena todos los silencios que quieras.', 'Me quedo callado escuchándote, que es lo que me gusta.'],
@@ -254,8 +273,6 @@ const TOPICS = [
       bad: ['Aguantar a gente que habla sin parar.', 'Que la otra persona no tenga nada que decir.']}
    ]}
 ];
-// Relleno si se agotan las frases del tema
-const FILLER = ['Perdona, decía que...', 'Y lo mejor es que nadie me creyó cuando lo conté.', 'Bueno, a lo que iba.', 'Me he liado, pero lo importante es que tú me escuchas.', '¿Te he contado lo de mi tía? Es muy larga, pero merece la pena.'];
 
 
 const LINE_NO = '¿Ya? Pero si acabamos de empezar...';
@@ -413,16 +430,10 @@ function setPortrait(el, i, t) {
   el.querySelector('img').onerror = () => { el.innerHTML = portrait(GIRLS[i], t); };
 }
 
-// Expresión de ella (assets/expr/). Lo que contestas la cambia: si te acerca, sonríe; si te aleja, se molesta.
-function setMood(m) {
-  if (!S) return;
-  S.mood = m;
-  const el = $('mood');
-  const lvl = S.lvl === 1 ? '' : '_' + S.lvl;
-  el.style.display = '';
-  el.onerror = () => { el.style.display = 'none'; };
-  el.src = `assets/expr/${PHOTOS[girlIdx].img}${lvl}_${m}.webp`;
-}
+// Qué se ve de ella: plano completo (sentada o de pie) o primer plano al hablar.
+function stageKey() { return PHOTOS[girlIdx].img + '_' + S.lvl; }
+// La expresión se elige igual que antes; por ahora solo hay caras "tranquila" aprobadas.
+function setMood(m) { if (S) S.mood = m; }
 function pickMood(i) {
   if (i > 0 && S.tipsy >= 1 && Math.random() < 0.5) return 'achispada';
   if (i >= 8) return Math.random() < 0.6 ? 'encantada' : 'coqueta';
@@ -431,10 +442,55 @@ function pickMood(i) {
 }
 
 function drawGirl() {
-  setPortrait($('portrait'), girlIdx, S.lvl);
-  setMood(S.mood);
   const w = PHOTOS[girlIdx].women[S.lvl - 1];
   $('who').textContent = w.name + ', ' + w.age + ' años';
+  refreshStage();
+}
+
+function refreshStage() {
+  if (!S) return;
+  const talking = S.talking;
+  $('close').classList.toggle('hidden', !talking);
+  $('wide').classList.toggle('hidden', talking);
+  if (!talking && !S.dancing) {
+    const src = `assets/sentada/${stageKey()}.png`;
+    if ($('wide').getAttribute('src') !== src) $('wide').src = src;
+  }
+  $('beer').classList.toggle('hidden', !S.beer);
+}
+// Boca: cuatro estados de cerrada a abierta, mientras ella habla.
+function startTalkAnim() {
+  clearInterval(S.mouthT);
+  const seq = [1, 2, 3, 4, 3, 2];
+  let i = 0;
+  const step = () => { $('close').src = `assets/caras/${stageKey()}_tranquila_${seq[i++ % seq.length]}.png`; };
+  step();
+  S.mouthT = setInterval(step, 150);
+  refreshStage();
+}
+function stopTalkAnim() {
+  if (!S) return;
+  clearInterval(S.mouthT);
+  refreshStage();
+}
+// Baile en plano completo de pie: alterna las tres poses.
+function startDance() {
+  S.dancing = true;
+  clearInterval(S.danceT);
+  const seq = ['base', 'pose2', 'base', 'pose3'];
+  let i = 0;
+  const step = () => { $('wide').src = `assets/baile/${stageKey()}_${seq[i++ % seq.length]}.png`; };
+  step();
+  S.danceT = setInterval(step, 700);
+  $('wide').classList.add('dancing');
+  refreshStage();
+}
+function stopDance() {
+  if (!S) return;
+  S.dancing = false;
+  clearInterval(S.danceT);
+  $('wide').classList.remove('dancing');
+  refreshStage();
 }
 
 // ---------- Voz ----------
@@ -498,35 +554,42 @@ const wc = t => t.trim().split(/\s+/).length;
 // Monólogo de 15 a 25 s: tema + datos al azar, frases sin repetir, y una pregunta final.
 function buildSpeech(first) {
   const l = L[S.lvl];
-  const secs = 15 + Math.floor(Math.random() * 11);
-  const words = Math.round(secs * WPS * l.rate) - (first ? wc(GIRLS[girlIdx].intro) : 0);
+  const secs = 7 + Math.floor(Math.random() * 6);   // 7 a 12 s
+  const intro = first ? pickFresh(PHOTOS[girlIdx].intros, S.usedIntro) : '';
+  const words = Math.round(secs * WPS * l.rate) - (intro ? wc(intro) : 0);
   S.slots = {};
   for (const k in SLOTS) S.slots[k] = rnd(SLOTS[k]);
   const topic = pickFresh(TOPICS, S.usedTopics);
-  const parts = [fill(pickFresh(topic.open, S.usedSent))];
-  let count = wc(parts[0]);
-  while (count < words) {
-    const pool = topic.body.some(x => !S.usedSent.includes(x)) ? topic.body : FILLER;
-    parts.push(fill(pickFresh(pool, S.usedSent)));
-    count = wc(parts.join(' '));
-  }
-  // Termina con una pregunta concreta; las respuestas del hombre contestan a ESA pregunta.
   const ask = pickFresh(topic.asks, S.usedSent);
-  parts.push(fill(ask.q));
+  const askText = fill(ask.q);
+  // Apertura propia (lista aparte para no repetirla), desarrollo corto y la pregunta de siempre al final.
+  const parts = [fill(pickFresh(topic.open, S.usedOpen))];
+  let count = wc(parts[0]) + wc(askText);
+  while (count < words) {
+    const extra = fill(pickFresh(topic.body, S.usedSent));
+    parts.push(extra);
+    count += wc(extra);
+  }
+  parts.push(askText);
   let text = parts.join(' ') + rnd(l.suffix);
-  if (first) text = GIRLS[girlIdx].intro + ' ' + text;
-  return {text, secs, ask};
+  if (intro) text = intro + ' ' + text;
+  return {text, secs, ask, key: 't' + TOPICS.indexOf(topic) + 'a' + topic.asks.indexOf(ask)};
 }
 
 // Tres respuestas a la última pregunta de ella, en orden aleatorio:
 // una que la acerca a casa (sube su interés), una neutra (no suma ni resta)
 // y una que la aleja (baja su interés). La paciencia no cambia con la respuesta.
+// Cada respuesta lleva su audio: assets/voz_hombre/{tema}a{pregunta}{g|n|b}{número}.mp3
 function makeOptions() {
   const a = S.ask;
+  const opt = (cat, list, i) => {
+    const tpl = pickFresh(list, S.usedReply);
+    return {t: fill(tpl), i, p: 0, file: `assets/voz_hombre/${S.askKey}${cat}${list.indexOf(tpl)}.mp3`};
+  };
   return [
-    {t: fill(pickFresh(a.good, S.usedReply)), i: rr([8, 12]), p: 0},
-    {t: fill(pickFresh(a.neutral, S.usedReply)), i: 0, p: 0},
-    {t: fill(pickFresh(a.bad, S.usedReply)), i: rr([-10, -6]), p: 0}
+    opt('g', a.good, rr([8, 12])),
+    opt('n', a.neutral, 0),
+    opt('b', a.bad, rr([-10, -6]))
   ].sort(() => Math.random() - 0.5);
 }
 
@@ -558,14 +621,17 @@ function renderOpts() {
 
 // Ella habla; cuando termina, aparecen tus tres respuestas.
 function speak(first) {
+  closeMusic();
   const sp = buildSpeech(first);
   S.ask = sp.ask;
+  S.askKey = sp.key;
   herSpeaks(sp.text);
   S.talking = true;
   S.opts = [];
   renderOpts();
   bars();
   applyMusic();
+  startTalkAnim();
   clearTimeout(S.timer);
   S.timer = setTimeout(endSpeech, sp.secs * 1000);
 }
@@ -573,6 +639,7 @@ function speak(first) {
 // Fin de la charla: aparecen tus tres respuestas.
 function endSpeech() {
   S.talking = false;
+  stopTalkAnim();
   S.opts = makeOptions();
   renderOpts();
   bars();
@@ -590,7 +657,7 @@ function skipSpeech() {
 // Extras: cuestan dinero o usos. Cada uno ocupa un turno.
 const EXTRAS = {
   beerHer:  {label: () => '🍺 Cerveza para ella (6 €)', ok: () => S.money >= 6,
-    run() { S.money -= 6; S.int += 12; S.tipsy++; setMood('achispada'); log('Tú', 'Una cerveza para ella.'); }},
+    run() { S.money -= 6; S.int += 12; S.tipsy++; S.beer = true; refreshStage(); log('Tú', 'Una cerveza para ella.'); }},
   beerMe:   {label: () => '🍺 Cerveza para ti (4 €)', ok: () => S.money >= 4,
     run() { S.money -= 4; S.pat += 20; S.drunk++; log('Tú', 'Una cerveza para ti.'); }},
   smoke:    {label: () => '🚬 Salir a fumar (quedan ' + (2 - S.smokes) + ')', ok: () => S.smokes < 2,
@@ -610,6 +677,20 @@ function renderBonus() {
     b.onclick = () => useExtra(k);
     box.appendChild(b);
   });
+  const song = document.createElement('button');
+  song.className = 'gift';
+  song.textContent = '🎵 Pedir canción (' + SONG_PRICE + ' €)';
+  song.disabled = S.over || S.talking || S.money < SONG_PRICE;
+  song.onclick = openMusic;
+  box.appendChild(song);
+  if (S.music && S.music.liked && S.music.playing) {
+    const dance = document.createElement('button');
+    dance.className = 'gift';
+    dance.textContent = '💃 Pedir que baile (quedan ' + (2 - S.dances) + ')';
+    dance.disabled = !canDance();
+    dance.onclick = askDance;
+    box.appendChild(dance);
+  }
 }
 
 function useExtra(k) {
@@ -619,6 +700,14 @@ function useExtra(k) {
 }
 
 function finish(win, msg) {
+  stopTalkAnim();
+  stopDance();
+  manVoice.pause();
+  manPlaying = false;
+  closeMusic();
+  songAudio.pause();
+  if (S.music) { clearTimeout(S.music.timer); S.music.playing = false; }
+  stopDance();
   S.over = true;
   S.talking = false;
   clearTimeout(S.timer);
@@ -650,6 +739,7 @@ function nextTurn() {
 }
 
 function answer(r) {
+  playManVoice(r.file);
   // Con dos cervezas tuyas te sale mejor la charla.
   setMood(pickMood(r.i));
   S.int += r.i + (S.drunk >= 2 ? 1 : 0);
@@ -680,10 +770,13 @@ function propose() {
 
 function start(lvl) {
   if (lvl > unlockedLevel()) return;
-  if (S) clearTimeout(S.timer);
+  if (S) { clearTimeout(S.timer); clearInterval(S.mouthT); clearInterval(S.danceT); }
+  songAudio.pause();
+  stopDance();
+  closeMusic();
   S = {lvl, pat: 100, int: 30, money: L[lvl].money, turn: 0, over: false,
-       tipsy: 0, drunk: 0, smokes: 0, baths: 0, talking: false, opts: [], timer: null, mood: 'tranquila',
-       slots: {}, usedTopics: [], usedSent: [], usedReply: [], ask: null};
+       tipsy: 0, drunk: 0, smokes: 0, baths: 0, talking: false, opts: [], timer: null, mood: 'tranquila', music: null, dances: 0, dancing: false, beer: false,
+       slots: {}, usedTopics: [], usedSent: [], usedReply: [], ask: null, usedOpen: [], usedIntro: []};
   $('start').classList.add('hidden');
   $('end').classList.add('hidden');
   $('game').classList.remove('hidden');
@@ -830,10 +923,21 @@ const music = new Audio('assets/audio/tenderness.mp3');
 music.loop = true;
 let audioPref = DB.get('ts_audio', {muted: false, vol: 0.35});
 function applyMusic() {
-  music.volume = audioPref.vol * (S && S.talking ? 0.4 : 1);   // más bajo mientras ella habla
+  music.volume = audioPref.vol * ((S && S.talking) || manPlaying ? 0.4 : 1);   // más bajo mientras habla alguien
   music.muted = audioPref.muted;
   $('music').textContent = audioPref.muted ? '🔇' : '🎵';
   $('vol').value = audioPref.vol;
+}
+// Voz del hombre: al elegir una respuesta suena su audio (si existe). Baja la música mientras habla.
+const manVoice = new Audio();
+let manPlaying = false;
+manVoice.onended = manVoice.onerror = () => { manPlaying = false; applyMusic(); };
+function playManVoice(file) {
+  manVoice.pause();
+  manVoice.src = file;
+  manPlaying = true;
+  applyMusic();
+  manVoice.play().catch(() => { manPlaying = false; applyMusic(); });
 }
 // Los navegadores solo dejan reproducir tras una interacción: se intenta con la primera pulsación.
 function startMusic() {
@@ -852,8 +956,105 @@ $('vol').oninput = e => {
   applyMusic();
 };
 
+// ---------- Música por género y baile ----------
+// Pistas en assets/musica/{id}_{1..5}.mp3 (libres de derechos). Le gustan 5 géneros y 5 no.
+const SONG_PRICE = 8;
+const SONG_MS = 30000;   // todas las canciones duran 30 s; el baile solo ocurre durante ese tiempo
+const GENRES = [
+  {id: 'reggaeton', name: 'Reguetón', likes: true, songs: ['Calor de terraza', 'Bajo la luna', 'Ritmo de barrio', 'Noche de pista', 'Fuego lento']},
+  {id: 'pop_latino', name: 'Pop latino', likes: true, songs: ['Bailando despacio', 'Corazón de verano', 'Sonrisa de costa', 'Mi canción favorita', 'Vuelve a mí']},
+  {id: 'baladas', name: 'Baladas', likes: true, songs: ['Lo que no te dije', 'Carta de madrugada', 'Un último café', 'Sin prisa', 'Quédate un rato']},
+  {id: 'tango', name: 'Tango', likes: true, songs: ['Corazón de arrabal', 'Noche de bandoneón', 'Esquina de Buenos Aires', 'Adiós de cristal', 'Pasión en el café']},
+  {id: 'bachata', name: 'Bachata', likes: true, songs: ['Tu mirada', 'Dulce cercanía', 'Guitarra y tú', 'Lento y cerca', 'Esa noche de mayo']},
+  {id: 'metal', name: 'Metal', likes: false, songs: ['Carne de acero', 'Furia de metal', 'Fuego interior', 'Muro de sombras', 'Sin piedad']},
+  {id: 'hardtechno', name: 'Hardtechno', likes: false, songs: ['Motor de madrugada', 'Pulso oscuro', 'Bajo industrial', 'Sala a ciegas', 'Ritmo sin fin']},
+  {id: 'dnb', name: 'Drum and bass', likes: false, songs: ['Break de hormigón', 'Velocidad urbana', 'Bajo en el pecho', 'Luces rápidas', 'Golpe seco']},
+  {id: 'dubstep', name: 'Dubstep', likes: false, songs: ['Caída de frecuencia', 'Wobble nocturno', 'Bajo de cristal', 'Grito electrónico', 'Pared de graves']},
+  {id: 'punk', name: 'Punk', likes: false, songs: ['Grito de garaje', 'Tres acordes y rabia', 'Sin permiso', 'Calle sin dueño', 'Ruidosa y libre']}
+];
+const songAudio = new Audio();
+
+function renderMusic(genre) {
+  const box = $('musicList');
+  box.innerHTML = '';
+  const btn = (text, fn) => { const b = document.createElement('button'); b.textContent = text; b.onclick = fn; box.appendChild(b); };
+  if (!genre) {
+    $('musicTitle').textContent = 'Elige género';
+    GENRES.forEach(g => btn(g.name, () => renderMusic(g)));
+  } else {
+    $('musicTitle').textContent = genre.name;
+    genre.songs.forEach((t, i) => btn((i + 1) + '. ' + t, () => pickSong(genre, i)));
+    btn('← Volver a géneros', () => renderMusic(null));
+  }
+}
+function openMusic() {
+  if (!S || S.over || S.talking || S.money < SONG_PRICE) return;
+  renderMusic(null);
+  $('musicPanel').classList.remove('hidden');
+}
+function closeMusic() { $('musicPanel').classList.add('hidden'); }
+$('musicClose').onclick = closeMusic;
+
+// Elegir canción: cuesta dinero y ocupa el turno. Si le gusta el género, el baile queda desbloqueado.
+function pickSong(g, i) {
+  if (S.money < SONG_PRICE) return;
+  S.money -= SONG_PRICE;
+  clearTimeout(S.music && S.music.timer);
+  S.music = {genre: g.id, title: g.songs[i], liked: g.likes, playing: false, timer: null};
+  closeMusic();
+  log('Tú', 'Pongo "' + g.songs[i] + '" (' + g.name + ').');
+  if (!g.likes) { S.int -= 5; setMood('molesta'); }
+  playSong(`assets/musica/${g.id}_${i + 1}.mp3`);
+  nextTurn();
+}
+
+// Sin audio todavía, la canción "dura" 30 s igualmente, para que la mecánica se pueda probar.
+function playSong(file) {
+  music.pause();
+  songAudio.pause();
+  songAudio.src = file;
+  S.music.playing = true;
+  const fallback = () => { if (!S.music.timer) S.music.timer = setTimeout(endSong, SONG_MS); };
+  songAudio.onended = endSong;
+  songAudio.onerror = fallback;
+  songAudio.play().catch(fallback);
+}
+function endSong() {
+  if (!S || !S.music) return;
+  clearTimeout(S.music.timer);
+  S.music.playing = false;
+  songAudio.pause();
+  songAudio.onended = songAudio.onerror = null;
+  stopDance();
+  if (!audioPref.muted) music.play().catch(() => {});
+  applyMusic();
+  bars();
+}
+
+// Baile: solo con un género que le gusta, mientras suena la canción, máximo 2 intentos por partida.
+function canDance() {
+  return !!(S && !S.over && !S.talking && S.music && S.music.liked && S.music.playing && S.dances < 2);
+}
+function askDance() {
+  if (!canDance()) return;
+  S.dances++;
+  log('Tú', '¿Bailamos?');
+  const need = S.tipsy >= 1 ? 35 : 40;   // con cerveza le cuesta menos decir que sí
+  if (S.int >= need) {
+    S.int += 10;
+    S.pat += 5;
+    setMood('encantada');
+    startDance();
+  } else {
+    S.int -= 3;
+    setMood('aburrida');
+  }
+  nextTurn();
+}
+
 // Arranque: si hay sesión válida, al menú; si no, a entrar.
 if (session() && DB.get('ts_users', {})[session()]) goMenu(); else show('auth');
 </script>
 </body>
 </html>
+
